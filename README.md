@@ -1,3 +1,5 @@
+THIS BRANCH IS DEAD, SIMPLY TO DOCUMENT (the start) OF WHAT WE DID FIRST
+
 MosaicPlannerLive 
 =================
 Forked repo from fcollman for edits:
