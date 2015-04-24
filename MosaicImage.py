@@ -161,6 +161,8 @@ class MosaicImage():
     
     def set_maxval(self,maxvalue):
         """set the maximum value in the image colormap"""
+        #CW debugging 2015-04-09:
+        #maxvalue = 10000        
         self.maxvalue=maxvalue;
         self.repaint()
     
@@ -172,6 +174,8 @@ class MosaicImage():
         #(minval,maxval)=self.Image.get_clim()
         self.imgCollection.update_clim(max=self.maxvalue)
         
+        #CW debug 2015-04-09:
+        #print self.oneImage
         if self.oneImage!=None:
             self.oneImage.set_clim(0,self.maxvalue)
         if self.twoImage!=None:

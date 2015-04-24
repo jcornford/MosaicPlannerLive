@@ -39,8 +39,9 @@ class VideoView(QtGui.QWidget):
         self.mmc.enableDebugLog(False)
         # # mmc.setCircularBufferMemoryFootprint(100)
         self.cam=self.mmc.getCameraDevice()
+        print(self.cam)
         self.mmc.setExposure(50)
-        self.mmc.setProperty(self.cam, 'Gain', 1)
+        #self.mmc.setProperty(self.cam, 'Gain', 1)
         Nch=len(self.channels)
         startChan=self.channels[Nch-1]
         for ch in self.channels:
@@ -228,6 +229,19 @@ class VideoView(QtGui.QWidget):
             
     def make_channelButtonClicked(self,ch,spnBox):
         def channelButtonClicked():
+            #next 12 lines for debugging only CW 2015-03-24              
+#            remcount = self.mmc.getRemainingImageCount()
+#            print "remcount:",remcount
+#            data =  self.mmc.getLastImage()
+#            print "data.max():",data.max()
+#            data =  self.mmc.getLastImage()
+#            if data.dtype == np.uint16: #this just makes it 8bit for display purposes
+#                maxval=self.imgSrc.get_max_pixel_value()
+#                #data=self.lut_convert16as8bit(data,0,maxval)
+#            gray = data.transpose() #you can leave these out depending on how your camera is oriented (this is rotating 180 degrees)
+#            flipped = np.fliplr(gray)
+#            print "flipped.max():", flipped.max()
+#            self.img.setImage(data,autoLevels=True)
             #print ch
             #print spnBox.value()
             self.mmc.stopSequenceAcquisition() 
@@ -237,6 +251,10 @@ class VideoView(QtGui.QWidget):
             self.mmc.setExposure(expTime)
             self.mmc.waitForConfig(self.channelGroup,ch)
             self.mmc.startContinuousSequenceAcquisition(expTime)
+            #Christian's debugging stuff 2015-03-24            
+            #print "going for it"
+            #data =  self.mmc.getLastImage()
+            #print data.max()
         return channelButtonClicked
         
     def closeEvent(self,evt):
@@ -264,7 +282,7 @@ class VideoView(QtGui.QWidget):
             data =  self.mmc.getLastImage()
             if data.dtype == np.uint16:
                 maxval=self.imgSrc.get_max_pixel_value()
-                data=self.lut_convert16as8bit(data,0,maxval)
+                #data=self.lut_convert16as8bit(data,0,maxval)
             gray = data.transpose()
             flipped = np.fliplr(gray)
            

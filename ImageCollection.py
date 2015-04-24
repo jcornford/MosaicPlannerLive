@@ -126,7 +126,7 @@ class ImageCollection():
         self.matplot_images=[]
         self.minvalue=0
         self.maxvalue=512
-    
+        
     def display8bit(self,image, display_min, display_max): 
         image = np.array(image, copy=True)
         image.clip(display_min, display_max, out=image)
@@ -232,7 +232,7 @@ class ImageCollection():
             return None
         
     def addImage(self,thedata,bbox):
-        
+        print "running addImage"
         #determine the file path of this image
         thefile=os.path.join(self.rootpath,"%010d"%self.imgCount + ".tif")
         themetafile=os.path.join(self.rootpath,"%010d"%self.imgCount + "_metadata.txt")
@@ -297,7 +297,6 @@ class ImageCollection():
             os.makedirs(self.rootpath)
         
         metafiles=[os.path.join(self.rootpath,f) for f in os.listdir(self.rootpath) if f.endswith('.txt') ]
-        
         print "loading metadata"
         #loop over files reading in metadata, and initializing Image objects, reading images to update display
         for file in metafiles:
@@ -309,7 +308,6 @@ class ImageCollection():
             self.addImageToDisplay(data,theimage.boundBox)
             self.imgCount+=1
      
-            
         
         del(testimage)
       
