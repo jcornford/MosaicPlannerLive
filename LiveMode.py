@@ -40,7 +40,7 @@ class VideoView(QtGui.QWidget):
         # # mmc.setCircularBufferMemoryFootprint(100)
         self.cam=self.mmc.getCameraDevice()
         self.mmc.setExposure(50)
-        self.mmc.setProperty(self.cam, 'Gain', 1)
+        #self.mmc.setProperty(self.cam, 'Gain', 1) #out by JC 2015_04_24 as not EMCCD camera 
         Nch=len(self.channels)
         startChan=self.channels[Nch-1]
         for ch in self.channels:
@@ -264,7 +264,7 @@ class VideoView(QtGui.QWidget):
             data =  self.mmc.getLastImage()
             if data.dtype == np.uint16:
                 maxval=self.imgSrc.get_max_pixel_value()
-                data=self.lut_convert16as8bit(data,0,maxval)
+                #data=self.lut_convert16as8bit(data,0,maxval) # JC-s20150424 temp comment out as stops working
             gray = data.transpose()
             flipped = np.fliplr(gray)
            
