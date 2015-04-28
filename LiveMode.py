@@ -16,6 +16,8 @@ class VideoView(QtGui.QWidget):
     def __init__(self,imgSrc,exposure_times=dict([]),channelGroup="Channels"):
         super(VideoView,self).__init__()
 
+        self.debugcounter = 1
+
         self.channelGroup=channelGroup
         self.exposure_times=exposure_times
         #self.setContentsMargins(0,0,0,0)
@@ -263,10 +265,23 @@ class VideoView(QtGui.QWidget):
             #rgb32 = self.mmc.popNextImage()
             data =  self.mmc.getLastImage()
             if data.dtype == np.uint16:
-                maxval=self.imgSrc.get_max_pixel_value()
-                #data=self.lut_convert16as8bit(data,0,maxval) # JC-s20150424 temp comment out as stops working
+                #maxval=self.imgSrc.get_max_pixel_value()
+                jc_max = np.max(data)
+                #data = self.display8bit(data, 0, jc_max) 
+                data = self.lut_convert16as8bit(data,0,jc_max) # JC-s20150424 temp comment out as stops working
             gray = data.transpose()
             flipped = np.fliplr(gray)
+
+            if self.debugcounter:
+                print flipped.dtype, 'is flipped dtype'
+                import matplotlib.pyplot as plt 
+                #plt.figure()
+                #plt.subplot(2,1,1)
+                #plt.imshow(flipped)
+                #plt.subplot(2,1,2)
+                #plt.hist(flipped.flatten(), 256, fc='k', ec='k')
+                #plt.show()
+                self.debugcounter = 0
            
             #gray=cv2.equalizeHist(gray)
             self.img.setImage(flipped,autoLevels=True)
