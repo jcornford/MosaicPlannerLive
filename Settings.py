@@ -83,7 +83,7 @@ class ChangeSiftSettings(wx.Dialog):
         
 class CameraSettings():
     """simple struct for containing the parameters for the camera"""
-    def __init__(self,sensor_height=1040,sensor_width=1388,pix_width=6.5,pix_height=6.5):
+    def __init__(self,sensor_height=2048,sensor_width=2048,pix_width=6.5,pix_height=6.5):
         #in pixels        
         self.sensor_height=sensor_height
         self.sensor_width=sensor_width
@@ -96,8 +96,8 @@ class CameraSettings():
         cfg.WriteFloat('pix_width',self.pix_width)
         cfg.WriteFloat('pix_height',self.pix_height)
     def load_settings(self,cfg):
-        self.sensor_height=cfg.ReadInt('sensor_height',1040)
-        self.sensor_width=cfg.ReadInt('sensor_width',1388)
+        self.sensor_height=cfg.ReadInt('sensor_height',2048)
+        self.sensor_width=cfg.ReadInt('sensor_width',2048)
         self.pix_width=cfg.ReadFloat('pix_width',6.5)
         self.pix_height=cfg.ReadFloat('pix_height',6.5)
 

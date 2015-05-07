@@ -53,7 +53,9 @@ class imageSource():
             return True
         else:
             print "score %f not locked on"%score
-            return False
+            print '***********************bypassing is_hardware_autofocus_done, imageSource.py line 57***************'
+            return True
+            #return False
         
         
 
@@ -108,7 +110,7 @@ class imageSource():
         #calculate bounding box for data
         bbox=self.calc_bbox(x,y)
         
-        print "todo get some real metadata"
+        #print "todo get some real metadata"
         metadata=None
         return data,bbox
 
@@ -134,7 +136,10 @@ class imageSource():
     
     def get_frame_size_um(self):
         (sensor_width,sensor_height)=self.get_sensor_size()
+        print 'sensor_width from mmc = ', sensor_width
+        print 'sensor_height from mmc = ', sensor_height
         pixsize = self.get_pixel_size()
+        print 'pixsize = ', pixsize
         return (sensor_width*pixsize,sensor_height*pixsize)
         
         
@@ -144,11 +149,11 @@ class imageSource():
         
         #we are going to follow the convention of upper left being 0,0 
         #and lower right being X,X where X is positive
-        left = x - fw/2;
-        right = x + fw/2;
+        left = x - fw/2.0;
+        right = x + fw/2.0;
         
-        top = y - fh/2;
-        bottom = y + fh/2;
+        top = y - fh/2.0;
+        bottom = y + fh/2.0;
         
        
         return Rectangle(left,right,top,bottom)

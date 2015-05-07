@@ -177,13 +177,29 @@ class ImageCollection():
             
         return None #we give up as we can't find the cutout for them.. sad
     
-    
+    def add3x3mosaic(self, x_data, y_data, image_width, image_height):
+        '''
+        x_data = x click data
+        y_data = y click data
+        image_width = sensor_width * pixel size
+        image_height = sensor_height * pixel size
+
+        '''
+        for image in self.images:
+            if image.contains_point(x_data,y_data):
+                user_clicked_on_old_image = True
+                print image
+
+        if user_clicked_on_old_image:
+            for y_index in [0,1,-1]:
+                for x_index in [0,1,-1]:
+                    return True
     
     def add_covered_point(self,x,y):
     
-        for image in self.images:
-            if image.contains_point(x,y):
-                return True
+        #for image in self.images:
+        #    if image.contains_point(x,y):
+        #        return False
         
         self.add_image_at(x,y)
         return False
@@ -200,7 +216,7 @@ class ImageCollection():
             
         except:
             #todo handle this better
-            print "ahh no! imageSource failed us"
+            print "ahh no!add_image_at() try block failed. line 203 of ImageCollection "
             traceback.print_exc(file=sys.stdout)
         print "hmm.. bbox is"
         bbox.printRect()

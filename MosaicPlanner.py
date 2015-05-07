@@ -32,7 +32,7 @@ from xml.dom.minidom import parseString
 import wx
 import xml.etree.ElementTree as ET
 import numpy
-from imageSourceMM import imageSource
+from imageSourceMM import imageSource 
 import LiveMode
 from pyqtgraph.Qt import QtCore, QtGui
 import sys, traceback
@@ -253,13 +253,18 @@ class MosaicToolbar(NavBarImproved):
         self.slider.SetMax(max)
            
 class MosaicPanel(FigureCanvas):
-    """A panel that extends the matplotlib class FigureCanvas for plotting all the plots, and handling all the GUI interface events
+    """
+    Inherits matplotlib.backends.backend_wxagg.FigureCanvasWxAgg
+    A panel that extends the matplotlib class FigureCanvas for plotting all the plots, and handling all the GUI interface events
     """
     def __init__(self, parent, config, **kwargs):
         """keyword the same as standard init function for a FigureCanvas"""
         self.figure = Figure(figsize=(5, 9))
         FigureCanvas.__init__(self, parent, -1, self.figure, **kwargs)
         self.canvas = self.figure.canvas
+
+        # JC additions
+        self.first_snappic = False
         
         #format the appearance
         self.figure.set_facecolor((1,1,1))
@@ -279,8 +284,9 @@ class MosaicPanel(FigureCanvas):
         self.camera_settings.load_settings(config)
         mosaic_settings=MosaicSettings()
         mosaic_settings.load_settings(config)   
-        self.MM_config_file= str(self.cfg.Read('MM_config_file',"C:\Users\Smithlab\Documents\ASI_LUM_RETIGA_CRISP.cfg"))  
-        print self.MM_config_file
+        #self.MM_config_file= str(self.cfg.Read('MM_config_file',"C:\Users\Smithlab\Documents\ASI_LUM_RETIGA_CRISP.cfg"))  
+        self.MM_config_file = str(self.cfg.Read('MM_config_file','C:\Program Files\Micro-Manager-1.4/MMConfig_AT_RAMM_jcx10.cfg'))
+        print('Config file is : ', self.MM_config_file)
         
         #setup the image source
         self.imgSrc=None
@@ -568,13 +574,37 @@ class MosaicPanel(FigureCanvas):
                         self.lassoLock=True                
                         self.canvas.widgetlock(self.lasso)
                     elif (mode == 'snappic' ):
-                        (fw,fh)=self.mosaicImage.imgCollection.get_image_size_um()
-                        for i in range(-1,2):
-                            for j in range(-1,2):
-                                self.mosaicImage.imgCollection.add_covered_point(evt.xdata+(j*fw),evt.ydata+(i*fh))
-                        
+                        if self.first_snappic:
+                            self.on_first_snappic()
+                            self.first_snappic = False
+                        else:
+                            (field_width,field_height)=self.mosaicImage.imgCollection.get_image_size_um() #sensor_width*pixsize,sensor_height*pixsize
+                            print field_width
+                            print field_height            
+                            print self.mosaicImage.imgCollection.imageSource.get_pixel_size()
+                            print self.camera_settings.sensor_height
+                            print self.camera_settings.sensor_width
+                            print self.camera_settings.pix_width 
+                            print self.camera_settings.pix_height
+
+                            #self.mosaicImage.imgCollection.add3x3mosaic(evt.xdata,evt.ydata,field_width,field_height)
+
+                            for y_index in [0,1,-1]:
+                                for x_index in [0,1,-1]:
+                                    self.mosaicImage.imgCollection.add_covered_point(evt.xdata+(x_index*field_width),evt.ydata+(y_index*field_height))
                 self.draw()
-                
+
+    def on_first_snappic(self):
+        print('********JC method begining, ignoreing mouse co-oridnated for first 3x3 matrix***********')
+        (fw,fh) = self.mosaicImage.imgCollection.get_image_size_um()
+        print(fw, fh, 'are the sizes')
+        (self.live_xpos, self.live_ypos) = self.imgSrc.get_xy()
+        for i in range(-1,2):
+            for j in range(-1,2):
+                self.mosaicImage.imgCollection.add_covered_point(self.live_xpos+(j*fw),self.live_ypos+(i*fh))
+
+
+    
     def on_release(self, evt):
         """canvas mouseup handler
         """
@@ -633,8 +663,11 @@ class MosaicPanel(FigureCanvas):
     def OnCorrTool(self,evt=""):
         """handler for when the CorrTool is pressed"""
         #we call another function so the step tool can use the same function
-        #corrval=self.CorrTool(window=70,delta=30,skip=15)
-        inliers=self.SiftCorrTool(window=70)
+        corrval=self.CorrTool(window=70,delta=30,skip=15)
+        print corrval
+        
+
+        #inliers=self.SiftCorrTool(window=70)
         self.draw()
     
     def OnHomeTool(self):
@@ -1163,6 +1196,8 @@ class ZVISelectFrame(wx.Frame):
         #    (xp,yp)=self.Transform.transform(pt.x,pt.y)
         #    print("%5.5f,%5.5f -> %5.5f,%5.5f (%5.5f, %5.5f)"%(pt.x,pt.y,xp,yp,pts_to[index].x,pts_to[index].y))
         dlg.Destroy()
+
+
         
  
 #dirname=sys.argv[1]
@@ -1174,3 +1209,9 @@ frame = ZVISelectFrame(None,"Mosaic Planner")
 # A Frame is a top-level window.
 app.MainLoop()
 QtGui.QApplication.quit()
+
+'''
+Commented this out to use ipython notebook to check the start of things!
+app.MainLoop()
+QtGui.QApplication.quit()
+'''

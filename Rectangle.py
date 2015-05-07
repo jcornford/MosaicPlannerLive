@@ -1,5 +1,17 @@
 class Rectangle():
-    def __init__(self,left,right,top,bottom):
+
+    '''
+    Thing this class it used for bbox -jc 20150507
+
+    upper left 0,0
+    left is most neg, right most postive
+
+    top is most neg, bottom is mpst positive
+
+    called by imagesource.takeimage - calc_bbox
+
+    '''
+    def __init__(self,left,right,top,bottom,x,y):
         
        
         if left>right:
@@ -15,6 +27,9 @@ class Rectangle():
         else:
             self.top=top
             self.bottom=bottom
+
+        self.x_origin = x
+        self.y_origin =  y 
         
     def printRect(self):
         print (self.left,self.right,self.top,self.bottom)
