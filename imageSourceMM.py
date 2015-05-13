@@ -136,8 +136,8 @@ class imageSource():
     
     def get_frame_size_um(self):
         (sensor_width,sensor_height)=self.get_sensor_size()
-        print 'sensor_width from mmc = ', sensor_width
-        print 'sensor_height from mmc = ', sensor_height
+        print 'sensor_width from mmc getImageWidth = ', sensor_width
+        print 'sensor_height from mmc getImageHeight= ', sensor_height
         pixsize = self.get_pixel_size()
         print 'pixsize = ', pixsize
         return (sensor_width*pixsize,sensor_height*pixsize)
@@ -156,7 +156,7 @@ class imageSource():
         bottom = y + fh/2.0;
         
        
-        return Rectangle(left,right,top,bottom)
+        return Rectangle(left,right,top,bottom,x,y)
         
     
     def snap_image(self):
@@ -179,10 +179,18 @@ class imageSource():
     def move_stage(self,x,y):
         #need to implement if not MICROMANAGER
         #move the stage to position x,y
+        print 'We have ran move_stage, imageSource.py'
         stg=self.mmc.getXYStageDevice()
+
+        print stg, 'is stage'
+        print x, 'is x position'
+        print y, 'is y position'
+        print '**********************'
         self.mmc.setXYPosition(stg,-x,y)
         self.mmc.waitForDevice(stg)
         print self.get_xy()
+
+
         
         
     def set_channel(self,channel):

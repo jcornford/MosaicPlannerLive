@@ -19,7 +19,8 @@ class MyImage():
         
     def saveMetadata(self,filename):
          d = {"boundBox":{"top":self.boundBox.top,"bottom":self.boundBox.bottom,
-                          "left":self.boundBox.left,"right":self.boundBox.right},
+                          "left":self.boundBox.left,"right":self.boundBox.right,
+                          "x_origin":self.boundBox.x_origin, "y_origin":self.boundBox.y_origin},
               "imagePath":{"path":self.imagePath,"format":".tif"}
              }
                  
@@ -43,17 +44,19 @@ class MyImage():
         bottom=f["boundBox"]["bottom"]
         left=f["boundBox"]["left"]
         right=f["boundBox"]["right"]
+        x=f["boundBox"]["x_origin"]
+        y=f["boundBox"]["y_origin"]
         
         cx=(left+right)/2;
         cy=(top+bottom)/2;
         
         self.imagePath=f["imagePath"]["path"]
         self.format=f["imagePath"]["format"]
-        self.boundBox=Rectangle(left,right,top,bottom)
+        self.boundBox=Rectangle(left,right,top,bottom,x,y)
 
         
-    def set_boundBox(self,left,right,top,bottom):
-        self.boundBox=Rectangle(left,right,top,bottom)
+    def set_boundBox(self,left,right,top,bottom,x,y):
+        self.boundBox=Rectangle(left,right,top,bottom,x,y)
 
 
     def get_cutout(self,box):
@@ -177,39 +180,60 @@ class ImageCollection():
             
         return None #we give up as we can't find the cutout for them.. sad
     
-    def add3x3mosaic(self, x_data, y_data, image_width, image_height):
+    def add3x3mosaic(self, x_data, y_data, image_width,
+                     image_height, retake_images = False):
         '''
         x_data = x click data
         y_data = y click data
         image_width = sensor_width * pixel size
         image_height = sensor_height * pixel size
 
+        Method first checks if click was on an old image. If it was,
+        sets old image's center as click location. Then takes 3x3 images
+        around click location. If an image already exists, default is
+        to not retake.
+
+        If there are no images, centres mosaic where the objective currently is.
+
+        To implement: 
+            - Automatically cemnter for tiling if click is not on a previous image.
+              (work out where you should be for the eventual grid).
         '''
+        # Work out centre co-ordinates
         for image in self.images:
             if image.contains_point(x_data,y_data):
                 user_clicked_on_old_image = True
-                print image
+                # Then set middle of old image as "click point"
+                x_data = image.boundBox.x_origin
+                y_data = image.boundBox.y_origin
+                print('User clicked on old image, centering click location')
 
-        if user_clicked_on_old_image:
-            for y_index in [0,1,-1]:
-                for x_index in [0,1,-1]:
-                    return True
-    
-    def add_covered_point(self,x,y):
-    
-        #for image in self.images:
-        #    if image.contains_point(x,y):
-        #        return False
-        
-        self.add_image_at(x,y)
-        return False
-        
+        if not self.images:
+            print('No images yet, taking the liberty of ignoring your click location')
+            (x_data, y_data) = self.imageSource.get_xy()
+
+        # Take images
+        for y_index in [0,1,-1]:
+            for x_index in [0,1,-1]:
+                x = x_data + (x_index*image_width)
+                y = y_data + (y_index*image_height)
+                if not self.images:
+                    self.add_image_at(x,y)
+                else:
+                    take_image = True
+                    # Now check if we want to actually take it
+                    for image in self.images:
+                        if image.contains_point(x,y) and retake_images == False:
+                            take_image = False
+                    if take_image:
+                        self.add_image_at(x,y)
+
     def add_image_at(self,x,y):
         #go get an image at x,y
         try:
             (thedata,bbox)=self.imageSource.take_image(x,y)
             if thedata.dtype == np.uint16:
-                print "converting"
+                print "converting np.uint16 dtype to 8bit, line 220 ImageCollection.py"
                 #maxval=self.imageSource.get_max_pixel_value()
                 jc_max = np.max(thedata)
                 thedata=self.lut_convert16as8bit(thedata,0,jc_max)
@@ -225,6 +249,15 @@ class ImageCollection():
         #add this image to the collection
         theimage=self.addImage(thedata,bbox)
         return theimage
+        
+    def add_covered_point(self,x,y):
+    
+        for image in self.images:
+            if image.contains_point(x,y):
+                return True
+        
+        self.add_image_at(x,y)
+        return False
         
         
     def get_cutout_from_source(self,box):

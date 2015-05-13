@@ -11,7 +11,7 @@ class Rectangle():
     called by imagesource.takeimage - calc_bbox
 
     '''
-    def __init__(self,left,right,top,bottom,x,y):
+    def __init__(self,left,right,top,bottom,x=None,y=None):
         
        
         if left>right:

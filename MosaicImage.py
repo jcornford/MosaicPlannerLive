@@ -480,7 +480,7 @@ class MosaicImage():
         dxy_um) the (x,y) tuple which contains the shift in microns necessary to align point xy2 with point xy1
 
         """
-        print "starting align by sift"
+        print "starting align_by_sift(), line 483 MosaicImage.py"
         pixsize=self.imgCollection.get_pixel_size()
         #cutout the images around the two points
         (x1,y1)=xy1

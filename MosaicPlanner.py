@@ -262,9 +262,6 @@ class MosaicPanel(FigureCanvas):
         self.figure = Figure(figsize=(5, 9))
         FigureCanvas.__init__(self, parent, -1, self.figure, **kwargs)
         self.canvas = self.figure.canvas
-
-        # JC additions
-        self.first_snappic = False
         
         #format the appearance
         self.figure.set_facecolor((1,1,1))
@@ -574,37 +571,44 @@ class MosaicPanel(FigureCanvas):
                         self.lassoLock=True                
                         self.canvas.widgetlock(self.lasso)
                     elif (mode == 'snappic' ):
-                        if self.first_snappic:
-                            self.on_first_snappic()
-                            self.first_snappic = False
-                        else:
-                            (field_width,field_height)=self.mosaicImage.imgCollection.get_image_size_um() #sensor_width*pixsize,sensor_height*pixsize
-                            print field_width
-                            print field_height            
-                            print self.mosaicImage.imgCollection.imageSource.get_pixel_size()
-                            print self.camera_settings.sensor_height
-                            print self.camera_settings.sensor_width
-                            print self.camera_settings.pix_width 
-                            print self.camera_settings.pix_height
-
-                            #self.mosaicImage.imgCollection.add3x3mosaic(evt.xdata,evt.ydata,field_width,field_height)
-
-                            for y_index in [0,1,-1]:
-                                for x_index in [0,1,-1]:
-                                    self.mosaicImage.imgCollection.add_covered_point(evt.xdata+(x_index*field_width),evt.ydata+(y_index*field_height))
+                        (field_width,field_height)=self.mosaicImage.imgCollection.get_image_size_um() #sensor_width*pixsize,sensor_height*pixsize
+                        print field_width
+                        print field_height            
+                        print self.mosaicImage.imgCollection.imageSource.get_pixel_size()
+                        print self.camera_settings.sensor_height
+                        print self.camera_settings.sensor_width
+                        print self.camera_settings.pix_width 
+                        print self.camera_settings.pix_height
+                        self.mosaicImage.imgCollection.add3x3mosaic(evt.xdata,evt.ydata,field_width,field_height)
                 self.draw()
+        #on a right click, only caring to re-taking images at the moment. perhaps not going to work with the saving etc eventually.
+        if evt.button == 3:
+            #if something hasn't locked the widget
+            if self.canvas.widgetlock.locked(): 
+                return
+            #if the click is inside the axis
+            if evt.inaxes is None: 
+                return
+            #if we have a toolbar
+            if (self.navtoolbar):
+                #figure out which of the mutually exclusive toolbar buttons are active
+                mode = self.navtoolbar.get_mode() 
+                #call the appropriate function
+                if (evt.inaxes == self.mosaicImage.one_axis):
+                    self.posList.pos1.setPosition(evt.xdata,evt.ydata)
+                    self.mosaicImage.paintPointsOneTwo(self.posList.pos1.getPosition(),self.posList.pos2.getPosition(),window=75)
+                elif (evt.inaxes == self.mosaicImage.two_axis):
+                    self.posList.pos2.setPosition(evt.xdata,evt.ydata)
+                    self.mosaicImage.paintPointsOneTwo(self.posList.pos1.getPosition(),self.posList.pos2.getPosition(),window=75)
+                else:
+                    if (mode == 'snappic'):
+                        (field_width,field_height)=self.mosaicImage.imgCollection.get_image_size_um() #sensor_width*pixsize,sensor_height*pixsize
+                        self.mosaicImage.imgCollection.add3x3mosaic(evt.xdata,evt.ydata,
+                                                                    field_width,field_height,
+                                                                    retake_images = True)
+            self.draw()
 
-    def on_first_snappic(self):
-        print('********JC method begining, ignoreing mouse co-oridnated for first 3x3 matrix***********')
-        (fw,fh) = self.mosaicImage.imgCollection.get_image_size_um()
-        print(fw, fh, 'are the sizes')
-        (self.live_xpos, self.live_ypos) = self.imgSrc.get_xy()
-        for i in range(-1,2):
-            for j in range(-1,2):
-                self.mosaicImage.imgCollection.add_covered_point(self.live_xpos+(j*fw),self.live_ypos+(i*fh))
 
-
-    
     def on_release(self, evt):
         """canvas mouseup handler
         """
@@ -614,9 +618,15 @@ class MosaicPanel(FigureCanvas):
             if self.lassoLock:
                 self.canvas.widgetlock.release(self.lasso)
                 self.lassoLock=False
-        else:
+
+        #not sure what this is doing, copied if for right click for now. 
+        if evt.button == 3:
+            if self.lassoLock:
+                self.canvas.widgetlock.release(self.lasso)
+                self.lassoLock=False
+        #else:
             #this would be for handling right click release, and call up a popup menu, this is not implemented so it gives an error
-            self.show_popup_menu((evt.x, self.canvas.GetSize()[1]-evt.y), None)
+        #    self.show_popup_menu((evt.x, self.canvas.GetSize()[1]-evt.y), None)
     
     def get_toolbar(self):
         """"return the toolbar, make one if neccessary"""
@@ -663,8 +673,13 @@ class MosaicPanel(FigureCanvas):
     def OnCorrTool(self,evt=""):
         """handler for when the CorrTool is pressed"""
         #we call another function so the step tool can use the same function
-        corrval=self.CorrTool(window=70,delta=30,skip=15)
-        print corrval
+        #inliers=self.SiftCorrTool(window=70)
+        try:
+            inliers=self.SiftCorrTool(window=70)
+        except Exception, e:
+            print 'SiftCorrTool error: %s' % e 
+            corrval=self.CorrTool(window=70,delta=30,skip=15)
+            print corrval
         
 
         #inliers=self.SiftCorrTool(window=70)
@@ -757,12 +772,23 @@ class MosaicPanel(FigureCanvas):
         #if corrval>.3:
         #    return True
         #else:
-        #    return False            
-        inliers=self.SiftCorrTool(window)
-        if inliers>12:
-            return True
-        else:
-            return False    
+        #    return False
+        try:            
+            inliers=self.SiftCorrTool(window)
+            if inliers>12:
+                return True
+            else:
+                return False
+        except:
+            print 'Error unning SiftCorrTool, Steptool method. Running CorrTool '
+            corrval=self.CorrTool(window,delta,skip)
+            if corrval>.3:
+                return True
+            else:
+               return False
+
+
+
         
    
     def SiftCorrTool(self,window=70):
@@ -774,7 +800,9 @@ class MosaicPanel(FigureCanvas):
         inliers is the number of inliers in the best transformation obtained by this operation
         
         """
-        (dxy_um,inliers)=self.mosaicImage.align_by_sift((self.posList.pos1.x,self.posList.pos1.y),(self.posList.pos2.x,self.posList.pos2.y),SiftSettings=self.SiftSettings)
+        (dxy_um,inliers)=self.mosaicImage.align_by_sift((self.posList.pos1.x,self.posList.pos1.y),
+                                                        (self.posList.pos2.x,self.posList.pos2.y),
+                                                        SiftSettings=self.SiftSettings)
         (dx_um,dy_um)=dxy_um
         self.posList.pos2.shiftPosition(-dx_um,-dy_um)
         return inliers

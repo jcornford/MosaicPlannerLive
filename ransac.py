@@ -78,6 +78,10 @@ return bestfit
     bestin = 0
     best_inlier_idxs = None
     N=from_points.shape[0]
+    print '**********************'
+    print from_points.shape, ' is shape of from_points'
+    print type(from_points), ' is frompoints dtype'
+    print '**********************'
     
  
     
