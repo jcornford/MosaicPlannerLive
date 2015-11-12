@@ -446,8 +446,29 @@ class MosaicPanel(FigureCanvas):
             if self.channel_settings.usechannels[ch]:
                 f.write(self.channel_settings.prot_names[ch] + "\t" + "%f\t%s\n" % (self.channel_settings.exposure_times[ch],ch))
 
+    def moveit(self,x,y):
+        self.imgSrc.move_stage(x,y)
+
+    def sortfocus(self,):
+        self.imgSrc.set_hardware_autofocus_state(True)
+        attempts=0
+        if self.imgSrc.has_hardware_autofocus():
+        #wait till autofocus settles
+            while not self.imgSrc.is_hardware_autofocus_done():
+                #time.sleep(.05)
+                attempts+=1
+                if attempts>100:
+                    print "not auto-focusing correctly.. giving up after 10 seconds"
+                    break
     def MultiDAcq(self,outdir,x,y,slice_index,frame_index=0):
 
+        p1 = Thread(target=self.moveit,args = (x,y))
+        p2 = Thread(target=self.sortfocus(),args = ())
+        p1.start()
+        p2.start()
+        p1.join()
+        p2.join()
+        '''
         #print datetime.datetime.now().time()," starting multiDAcq, autofocus on"
         self.imgSrc.set_hardware_autofocus_state(True)
         #print datetime.datetime.now().time()," starting stage move"
@@ -469,7 +490,7 @@ class MosaicPanel(FigureCanvas):
         else:
             score=self.imgSrc.image_based_autofocus(chan=self.channel_settings.map_chan)
             print score
-
+        '''
         #print datetime.datetime.now().time()," starting multichannel acq"
         currZ=self.imgSrc.get_z()
 
