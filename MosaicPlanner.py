@@ -420,19 +420,19 @@ class MosaicPanel(FigureCanvas):
 
     def MultiDAcq(self,outdir,x,y,slice_index,frame_index=0):
 
-        #print datetime.datetime.now().time()," starting multiDAcq, autofocus on"
+        print datetime.datetime.now().time()," starting multiDAcq, autofocus on"
         self.imgSrc.set_hardware_autofocus_state(True)
-        #print datetime.datetime.now().time()," starting stage move"
+        print datetime.datetime.now().time()," starting stage move"
         self.imgSrc.move_stage(x,y)
         attempts=0
-        #print datetime.datetime.now().time()," starting autofocus"
+        print datetime.datetime.now().time()," starting autofocus"
         if self.imgSrc.has_hardware_autofocus():
             #wait till autofocus settles
             while not self.imgSrc.is_hardware_autofocus_done():
                 #time.sleep(.05)
                 attempts+=1
                 if attempts>100:
-                    print "not auto-focusing correctly.. giving up after 10 seconds"
+                    print "CRISP not auto-focusing correctly.. giving up after 100 attempts"
                     break
 
 
@@ -441,8 +441,8 @@ class MosaicPanel(FigureCanvas):
         else:
             score=self.imgSrc.image_based_autofocus(chan=self.channel_settings.map_chan)
             print score
-
-        #print datetime.datetime.now().time()," starting multichannel acq"
+        print 'There were ',attempts, 'to autofocus'
+        print datetime.datetime.now().time()," starting multichannel acq"
         currZ=self.imgSrc.get_z()
 
         #print 'flag is,',self.zstack_settings.zstack_flag
@@ -469,8 +469,10 @@ class MosaicPanel(FigureCanvas):
 
                     tif_filepath=os.path.join(path,prot_name+"_S%04d_F%04d_Z%02d.tif"%(slice_index,frame_index,z_index))
                     metadata_filepath=os.path.join(path,prot_name+"_S%04d_F%04d_Z%02d_metadata.txt"%(slice_index,frame_index,z_index))
-
+                    start = time.clock()
+                    print start,'1'
                     imsave(tif_filepath,data)
+                    print (time.clock()-start),'2'
 
                     self.write_slice_metadata(metadata_filepath,ch,x,y,z)
 
@@ -487,10 +489,22 @@ class MosaicPanel(FigureCanvas):
             wx.MessageBox("You didn't enter a save directory... \n Aborting aquisition")
             return None
 
-        outdir=dlg.GetPath()
+        outdir = dlg.GetPath()
         dlg.Destroy()
-        print outdir, 'is outdir'
+        #self._main_runacq(outdir)
+        mainthread = Thread(target=self._main_runacq, args=(outdir,))
+        sidethread = Thread(target=self._runacq_infowindow)
+        sidethread.start()
+        mainthread.start()
 
+
+    def _runacq_infowindow(self):
+        wx.MessageBox("testing")
+        print 'ive been ran!'
+        #wx.Dialog.__init__(self, parent = None, title = 'info box',style=wx.DEFAULT_DIALOG_STYLE, size=(420, -1))
+
+    def _main_runacq(self,outdir):
+        #wx.MessageBox("testing")
         #setup output directories
         for k,ch in enumerate(self.channel_settings.channels):
             if self.channel_settings.usechannels[ch]:
@@ -512,12 +526,13 @@ class MosaicPanel(FigureCanvas):
 
         #loop over positions
         for i,pos in enumerate(self.posList.slicePositions):
-            #turn on autofocus
+            print 'looping over positons'
             if pos.frameList is None:
                 self.MultiDAcq(outdir,pos.x,pos.y,i)
             else:
                 for j,fpos in enumerate(pos.frameList.slicePositions):
                     self.MultiDAcq(outdir,fpos.x,fpos.y,i,j)
+
 
     def EditChannels(self,event = "none"):
         dlg = ChangeChannelSettings(None, -1, title = "Channel Settings", settings = self.channel_settings,style=wx.OK)
@@ -801,19 +816,17 @@ class MosaicPanel(FigureCanvas):
         self.draw()
 
     def OnFastForwardTool(self,event):
+        goahead=True
+        #keep doing this till the StepTool says it shouldn't go forward anymore
+        while (goahead):
+            goahead=self.StepTool()
+            self.OnCropTool()
+            self.draw()
+        #call up a box and make a beep alerting the user for help
+        wx.MessageBox('Fast Forward Aborted, Help me','Info')
 
-        def antifreeze():
-            """handler for the FastForwardTool"""
-            goahead=True
-            #keep doing this till the StepTool says it shouldn't go forward anymore
-            while (goahead):
-                goahead=self.StepTool()
-                self.OnCropTool()
-                self.draw()
-            #call up a box and make a beep alerting the user for help
-            wx.MessageBox('Fast Forward Aborted, Help me','Info')
-        t = Thread(target=antifreeze())
-        t.start
+        #t = Thread(target=antifreeze)
+        #t.start()
 
     def StepTool(self):
         """function for performing a step, assuming point1 and point2 have been selected
@@ -1305,4 +1318,5 @@ app = wx.App(False)
 frame = ZVISelectFrame(None,"Mosaic Planner")
 # A Frame is a top-level window.
 app.MainLoop()
+
 QtGui.QApplication.quit()

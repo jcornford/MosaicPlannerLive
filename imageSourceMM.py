@@ -13,8 +13,8 @@ class imageSource():
         self.configFile=configFile
         self.mmc = MMCorePy.CMMCore() 
         self.mmc.enableStderrLog(False)
-        self.mmc.enableDebugLog(False)
-        self.mmc.setPrimaryLogFile('CoreLog.txt')
+        self.mmc.enableDebugLog(True)
+        self.mmc.setPrimaryLogFile('CoreLogSpeed.txt')
         self.mmc.loadSystemConfiguration(self.configFile)
        
         self.channelGroupName=channelGroupName
