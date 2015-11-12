@@ -47,6 +47,7 @@ import faulthandler
 import datetime
 
 from threading import Thread
+import multiprocessing as mp
 
 class MosaicToolbar(NavBarImproved):
     """A custom toolbar which adds buttons and to interact with a MosaicPanel
@@ -279,6 +280,32 @@ class MosaicToolbar(NavBarImproved):
     def setSliderMax(self,max=500):
         self.slider.SetMax(max)
 
+
+def _file_save(slice_index,frame_index, z_index, prot_name,path,
+                   data,ch,x,y,z):
+    tif_filepath=os.path.join(path,prot_name+"_S%04d_F%04d_Z%02d.tif"%(slice_index,frame_index,z_index))
+    metadata_filepath=os.path.join(path,prot_name+"_S%04d_F%04d_Z%02d_metadata.txt"%(slice_index,frame_index,z_index))
+    start = time.clock()
+    print start,'1'
+    imsave(tif_filepath,data)
+    print (time.clock()-start),'2'
+    #write_slice_metadata(metadata_filepath,ch,x,y,z)
+
+
+def write_slice_metadata(filename,ch,xpos,ypos,zpos):
+    f = open(filename, 'w')
+    channelname = self.channel_settings.prot_names[ch]
+    (height,width)=self.imgSrc.get_sensor_size()
+    ScaleFactorX=self.imgSrc.get_pixel_size()
+    ScaleFactorY=self.imgSrc.get_pixel_size()
+    exp_time=self.channel_settings.exposure_times[ch]
+
+    f.write("Channel\tWidth\tHeight\tMosaicX\tMosaicY\tScaleX\tScaleY\tExposureTime\n")
+    f.write("%s\t%d\t%d\t%d\t%d\t%f\t%f\t%f\n" % \
+    (channelname, width, height, 1, 1, ScaleFactorX, ScaleFactorY, exp_time))
+    f.write("XPositions\tYPositions\tFocusPositions\n")
+    f.write("%s\t%s\t%s\n" %(xpos, ypos, zpos))
+
 class MosaicPanel(FigureCanvas):
     """A panel that extends the matplotlib class FigureCanvas for plotting all the plots, and handling all the GUI interface events
     """
@@ -387,19 +414,7 @@ class MosaicPanel(FigureCanvas):
         self.OnCropTool()
         self.draw()
 
-    def write_slice_metadata(self,filename,ch,xpos,ypos,zpos):
-        f = open(filename, 'w')
-        channelname=self.channel_settings.prot_names[ch]
-        (height,width)=self.imgSrc.get_sensor_size()
-        ScaleFactorX=self.imgSrc.get_pixel_size()
-        ScaleFactorY=self.imgSrc.get_pixel_size()
-        exp_time=self.channel_settings.exposure_times[ch]
 
-        f.write("Channel\tWidth\tHeight\tMosaicX\tMosaicY\tScaleX\tScaleY\tExposureTime\n")
-        f.write("%s\t%d\t%d\t%d\t%d\t%f\t%f\t%f\n" % \
-        (channelname, width, height, 1, 1, ScaleFactorX, ScaleFactorY, exp_time))
-        f.write("XPositions\tYPositions\tFocusPositions\n")
-        f.write("%s\t%s\t%s\n" %(xpos, ypos, zpos))
 
     def write_session_metadata(self,outdir):
         filename=os.path.join(outdir,'session_metadata.txt')
@@ -466,15 +481,13 @@ class MosaicPanel(FigureCanvas):
                     self.imgSrc.set_exposure(self.channel_settings.exposure_times[ch])
                     self.imgSrc.set_channel(ch)
                     data=self.imgSrc.snap_image()
+                    p = mp.Process(target=_file_save,args=(slice_index,frame_index, z_index, prot_name,path,
+                    np.copy(data),ch,x,y,z,))
+                    p.start()
+                    self.processes.append(p)
 
-                    tif_filepath=os.path.join(path,prot_name+"_S%04d_F%04d_Z%02d.tif"%(slice_index,frame_index,z_index))
-                    metadata_filepath=os.path.join(path,prot_name+"_S%04d_F%04d_Z%02d_metadata.txt"%(slice_index,frame_index,z_index))
-                    start = time.clock()
-                    print start,'1'
-                    imsave(tif_filepath,data)
-                    print (time.clock()-start),'2'
 
-                    self.write_slice_metadata(metadata_filepath,ch,x,y,z)
+
 
     def OnRunAcq(self,event="none"):
         print "running"
@@ -491,11 +504,11 @@ class MosaicPanel(FigureCanvas):
 
         outdir = dlg.GetPath()
         dlg.Destroy()
-        #self._main_runacq(outdir)
-        mainthread = Thread(target=self._main_runacq, args=(outdir,))
-        sidethread = Thread(target=self._runacq_infowindow)
-        sidethread.start()
-        mainthread.start()
+        self._main_runacq(outdir)
+        #mainthread = Thread(target=self._main_runacq, args=(outdir,))
+        #sidethread = Thread(target=self._runacq_infowindow)
+        #sidethread.start()
+        #mainthread.start()
 
 
     def _runacq_infowindow(self):
@@ -524,6 +537,7 @@ class MosaicPanel(FigureCanvas):
             self.imgSrc.move_stage(currpos.x,currpos.y)
             currpos=self.posList.get_prev_pos(currpos)
 
+        self.processes = []
         #loop over positions
         for i,pos in enumerate(self.posList.slicePositions):
             print 'looping over positons'
@@ -532,6 +546,8 @@ class MosaicPanel(FigureCanvas):
             else:
                 for j,fpos in enumerate(pos.frameList.slicePositions):
                     self.MultiDAcq(outdir,fpos.x,fpos.y,i,j)
+        for p in self.processes:
+            p.join()
 
 
     def EditChannels(self,event = "none"):
