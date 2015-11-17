@@ -558,13 +558,13 @@ class MosaicPanel(FigureCanvas):
 
         elif self.posList.slicePositions[0].frameList is None:
             coordinates = [(pos.x,pos.y,i) for i,pos in enumerate(self.posList.slicePositions)]
-
-
-        self.runProcess = mp.Process(target = acquisition_process(self.MM_config_file,
+        print coordinates[0], 'is coords'
+        config = None
+        self.runProcess = mp.Process(target = acquisition_process(self.imgSrc,
                                                                   metadata_dictionary,
                                                                   coordinates,
-                                                                  config,
-                                                                  outdir)
+                                                                  self.cfg,
+                                                                  outdir))
         self.runProcess.start()
 
         '''
@@ -884,6 +884,7 @@ class MosaicPanel(FigureCanvas):
         goahead=True
         #keep doing this till the StepTool says it shouldn't go forward anymore
         while (goahead):
+            wx.Yield()
             goahead=self.StepTool()
             self.OnCropTool()
             self.draw()

@@ -21,6 +21,9 @@ import multiprocessing as mp
 import wx
 import os
 
+from Settings import ChannelSettings
+from tifffile import imsave
+
 from imageSourceMM import imageSource
 
 STOP_TOKEN = 'STOP!!!'
@@ -33,7 +36,7 @@ def acquisition_process(MM_config_file,metadata_dictionary,coordinates,config,ou
 
 
 
-class MosaicAquisition()
+class MosaicAquisition():
 
     def __init__(self, MM_config_file, metadata_dictionary, coordinates,config,outdir):
         '''
@@ -47,10 +50,15 @@ class MosaicAquisition()
         '''
 
         try:
-            self.imgSrc=imageSource(MM_config_file)
+            self.imgSrc=MM_config_file
         except:
             print('Could not set up acquisition image source, aborting...')
             return None
+        print self.imgSrc.get_xy(),'is xy'
+        self.config = config
+        self.channel_settings=ChannelSettings(self.imgSrc.get_channels())
+        self.channel_settings.load_settings(self.config)
+        self.imgSrc.set_channel(self.channel_settings.map_chan)
 
         self.dataQueue = mp.Queue()
         self.saveProcess =  mp.Process(target=file_save_process,args=(self.dataQueue,STOP_TOKEN, metadata_dictionary))
@@ -59,21 +67,15 @@ class MosaicAquisition()
 
         if len(coordinates[0]) == 3: # No framelist, just single positions
             for xyi in coordinates:
-                self.multiDAcq(xyi[0], xyi[1], xyi[2], frameindex=0)
+                self.multiDAcq(outdir,xyi[0], xyi[1], xyi[2], frame_index=0)
 
         elif len(coordinates[0]) == 4: # Framelist exists
             for xyij in coordinates:
-                self.multiDAcq(xyij[0], xyij[1], xyij[2], xyij[3])
+                self.multiDAcq(outdir,xyij[0], xyij[1], xyij[2], xyij[3])
 
         else:
             print('Acquisition coordinates unexpected dimensions, aborting')
             return None
-
-
-        self.config = wx.Config('settings') # ? or just config
-        self.channel_settings=ChannelSettings(self.imgSrc.get_channels())
-        self.channel_settings.load_settings(self.config)
-        self.imgSrc.set_channel(self.channel_settings.map_chan)
 
         self.dataQueue.put(STOP_TOKEN)
         self.saveProcess.join()
