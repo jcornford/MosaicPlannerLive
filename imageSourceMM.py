@@ -4,7 +4,6 @@ from PIL import Image
 import time
 from Rectangle import Rectangle
 import wx
-from retry import retry
 
 class imageSource():
     
@@ -260,8 +259,7 @@ class imageSource():
         print "fw,fh",fw,fh
        
         return Rectangle(left,right,top,bottom)
-        
-    #@retry(tries= 5)
+
     def snap_image(self):
         #NEED TO IMPLEMENT IF NOT MICROMANAGER
         #with microscope in current configuration
